@@ -70,7 +70,13 @@ export const CourseDetail: React.FC = () => {
   };
 
   const handlePurchaseNow = () => {
-    navigate(`/checkout/${course.id}`);
+  // Option 1: Open WhatsApp
+  const phoneNumber = '918078694114';
+  const message = encodeURIComponent(
+    `Hi! I'm interested in purchasing "${course.title}". Can you help me with the enrollment process?`
+  );
+  window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+  ;
   };
 
   const handleEnquireNow = () => {

@@ -1,3 +1,4 @@
+// src/services/coursesService.ts
 import { supabase } from '../lib/supabase';
 import { Course } from '../types';
 
@@ -11,6 +12,8 @@ export interface CourseFormData {
   tier?: string;
   imageColor?: string;
   icon?: string;
+  imageUrl?: string | null;
+  vimeoVideoUrl?: string | null;
   rating?: number;
   reviewCount?: number;
   isPopular?: boolean;
@@ -59,7 +62,6 @@ export interface CourseFormData {
 export async function fetchCourseById(id: string): Promise<Course | null> {
   console.log('🔍 Fetching course with ID:', id);
   
-  // First, fetch the main course data
   const { data: courseData, error: courseError } = await supabase
     .from('courses')
     .select('*')
@@ -76,9 +78,13 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
     return null;
   }
 
-  console.log('✅ Course data fetched:', courseData);
+  console.log('✅ Course data fetched:', {
+    title: courseData.title,
+    image_url: courseData.image_url,
+    vimeo_video_url: courseData.vimeo_video_url,
+    icon: courseData.icon,
+  });
 
-  // Fetch all related data separately for better error handling
   const [
     instructorResult,
     pricingResult,
@@ -137,22 +143,6 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
       .order('order_position'),
   ]);
 
-  // Debug logging for pricing
-  console.log('💰 Pricing result:', {
-    data: pricingResult.data,
-    error: pricingResult.error,
-  });
-
-  if (pricingResult.error) {
-    console.error('❌ Pricing fetch error:', pricingResult.error);
-  }
-
-  if (!pricingResult.data) {
-    console.warn('⚠️ No pricing data found for course:', id);
-  } else {
-    console.log('✅ Pricing data:', pricingResult.data);
-  }
-
   const pricing = pricingResult.data;
   const schedule = scheduleResult.data;
   const instructor = instructorResult.data;
@@ -166,15 +156,16 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
     description: courseData.description,
     fullDescription: courseData.full_description,
     tier: courseData.tier,
-    imageColor: courseData.image_color,
-    icon: courseData.icon,
+    imageColor: courseData.image_color || 'from-blue-400 to-purple-500',
+    icon: courseData.icon || '📚',
+    image_url: courseData.image_url || null,
+    vimeo_video_url: courseData.vimeo_video_url || null,
     rating: courseData.rating,
     reviewCount: courseData.review_count,
     isPopular: courseData.is_popular,
     isLocked: courseData.is_locked,
     spotsLeft: courseData.spots_left,
     viewingNow: courseData.viewing_now,
-
     instructor: instructor
       ? {
           id: instructor.id,
@@ -186,7 +177,6 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
           isOnline: instructor.is_online,
         }
       : undefined,
-
     pricing: pricing
       ? {
           originalPrice: Number(pricing.original_price),
@@ -206,7 +196,6 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
           moneyBackGuarantee: true,
           freeTrial: true,
         },
-
     schedule: schedule
       ? {
           daysPerWeek: schedule.days_per_week,
@@ -217,7 +206,6 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
           timeSlots: schedule.time_slots || [],
         }
       : undefined,
-
     learningOutcomes:
       learningOutcomesResult.data?.map((lo) => ({
         id: lo.id,
@@ -260,7 +248,6 @@ export async function fetchCourseById(id: string): Promise<Course | null> {
   };
 }
 
-// ... rest of the functions remain the same
 export async function fetchAllCourses(): Promise<Course[]> {
   const { data: coursesData, error: coursesError } = await supabase
     .from('courses')
@@ -341,23 +328,27 @@ export async function fetchAllCourses(): Promise<Course[]> {
         description: course.description,
         fullDescription: course.full_description,
         tier: course.tier,
-        imageColor: course.image_color,
-        icon: course.icon,
+        imageColor: course.image_color || 'from-blue-400 to-purple-500',
+        icon: course.icon || '📚',
+        image_url: course.image_url || null,
+        vimeo_video_url: course.vimeo_video_url || null,
         rating: course.rating,
         reviewCount: course.review_count,
         isPopular: course.is_popular,
         isLocked: course.is_locked,
         spotsLeft: course.spots_left,
         viewingNow: course.viewing_now,
-        instructor: course.instructor ? {
-          id: course.instructor.id,
-          name: course.instructor.name,
-          photo: course.instructor.photo,
-          bio: course.instructor.bio,
-          yearsExperience: course.instructor.years_experience,
-          specialization: course.instructor.specialization,
-          isOnline: course.instructor.is_online,
-        } : undefined,
+        instructor: course.instructor
+          ? {
+              id: course.instructor.id,
+              name: course.instructor.name,
+              photo: course.instructor.photo,
+              bio: course.instructor.bio,
+              yearsExperience: course.instructor.years_experience,
+              specialization: course.instructor.specialization,
+              isOnline: course.instructor.is_online,
+            }
+          : undefined,
         learningOutcomes: learningOutcomes.data?.map((lo) => ({
           id: lo.id,
           text: lo.text,
@@ -373,31 +364,35 @@ export async function fetchAllCourses(): Promise<Course[]> {
           title: c.title,
           description: c.description,
         })),
-        schedule: schedule.data ? {
-          daysPerWeek: schedule.data.days_per_week,
-          duration: schedule.data.duration,
-          sessionLength: schedule.data.session_length,
-          totalSessions: schedule.data.total_sessions,
-          nextBatchDate: schedule.data.next_batch_date,
-          timeSlots: schedule.data.time_slots,
-        } : undefined,
-        pricing: pricing.data ? {
-          originalPrice: Number(pricing.data.original_price),
-          discountedPrice: Number(pricing.data.discounted_price),
-          currency: pricing.data.currency,
-          perSessionPrice: Number(pricing.data.per_session_price),
-          paymentPlans: pricing.data.payment_plans,
-          moneyBackGuarantee: pricing.data.money_back_guarantee,
-          freeTrial: pricing.data.free_trial,
-        } : {
-          originalPrice: 9999,
-          discountedPrice: 7999,
-          currency: 'INR',
-          perSessionPrice: 500,
-          paymentPlans: ['Full payment', '2 installments'],
-          moneyBackGuarantee: true,
-          freeTrial: true,
-        },
+        schedule: schedule.data
+          ? {
+              daysPerWeek: schedule.data.days_per_week,
+              duration: schedule.data.duration,
+              sessionLength: schedule.data.session_length,
+              totalSessions: schedule.data.total_sessions,
+              nextBatchDate: schedule.data.next_batch_date,
+              timeSlots: schedule.data.time_slots,
+            }
+          : undefined,
+        pricing: pricing.data
+          ? {
+              originalPrice: Number(pricing.data.original_price),
+              discountedPrice: Number(pricing.data.discounted_price),
+              currency: pricing.data.currency,
+              perSessionPrice: Number(pricing.data.per_session_price),
+              paymentPlans: pricing.data.payment_plans,
+              moneyBackGuarantee: pricing.data.money_back_guarantee,
+              freeTrial: pricing.data.free_trial,
+            }
+          : {
+              originalPrice: 9999,
+              discountedPrice: 7999,
+              currency: 'INR',
+              perSessionPrice: 500,
+              paymentPlans: ['Full payment', '2 installments'],
+              moneyBackGuarantee: true,
+              freeTrial: true,
+            },
         reviews: reviews.data?.map((r) => ({
           id: r.id,
           parentName: r.parent_name,
@@ -437,6 +432,8 @@ export async function createCourse(courseData: CourseFormData): Promise<string> 
       tier: courseData.tier || 'mini',
       image_color: courseData.imageColor || 'from-blue-500 to-blue-600',
       icon: courseData.icon || '📚',
+      image_url: courseData.imageUrl || null,
+      vimeo_video_url: courseData.vimeoVideoUrl || null,
       rating: courseData.rating || 0,
       review_count: courseData.reviewCount || 0,
       is_popular: courseData.isPopular || false,
@@ -573,6 +570,8 @@ export async function updateCourse(
       tier: courseData.tier || 'mini',
       image_color: courseData.imageColor || 'from-blue-500 to-blue-600',
       icon: courseData.icon || '📚',
+      image_url: courseData.imageUrl || null,
+      vimeo_video_url: courseData.vimeoVideoUrl || null,
       rating: courseData.rating || 0,
       review_count: courseData.reviewCount || 0,
       is_popular: courseData.isPopular || false,
@@ -696,6 +695,7 @@ export async function updateCourse(
   }
 }
 
+// ✅ ADD THIS FUNCTION (it was missing)
 export async function deleteCourse(id: string): Promise<void> {
   const { error } = await supabase.from('courses').delete().eq('id', id);
   if (error) throw error;

@@ -555,3 +555,33 @@ export const Checkout: React.FC = () => {
     </div>
   );
 };
+const generateEventId = () => {
+  return crypto.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+};
+
+const sendAnalyticsEvent = async (
+  event_name: string,
+  event_id: string,
+  value: number,
+  email: string,
+  phone: string
+) => {
+  try {
+    await fetch('https://analytics.borngenius.in/collect.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name,
+        event_id,
+        currency: 'INR',
+        value,
+        user_data: { email, phone },
+        user_agent: navigator.userAgent
+      })
+    });
+  } catch (err) {
+    console.error('Analytics error', err);
+  }
+};
