@@ -91,11 +91,17 @@ export const CourseDetail: React.FC = () => {
       .toUpperCase()
       .slice(0, 2);
   };
+  const getVimeoId = (url?: string) => {
+  if (!url) return null;
+  const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return match ? match[1] : null;
+};
+
 
   return (
     <div className="pb-32 md:pb-0 bg-gray-50">
       <div className="relative">
-        <div className={`w-full h-80 md:h-96 bg-gradient-to-br ${course.imageColor} flex items-center justify-center relative`}>
+<div className="w-full h-auto relative">
           <button
             onClick={() => navigate(-1)}
             className="absolute top-4 md:top-6 left-4 md:left-6 w-10 h-10 md:w-12 md:h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors z-10"
@@ -126,7 +132,40 @@ export const CourseDetail: React.FC = () => {
             </button>
           </div>
 
-          <span className="text-9xl">{course.icon}</span>
+          {/* COURSE MEDIA */}
+<div className="w-full h-auto relative">
+
+  {/* 1️⃣ Vimeo Video */}
+  {getVimeoId(course.vimeo_video_url) ? (
+    <div className="relative pt-[56.25%]">
+      <iframe
+        src={`https://player.vimeo.com/video/${getVimeoId(course.vimeo_video_url)}`}
+        className="absolute top-0 left-0 w-full h-full"
+        frameBorder="0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+
+  /* 2️⃣ Image */
+  ) : course.image_url ? (
+    <img
+      src={course.image_url}
+      alt={course.title}
+      className="w-full h-[240px] object-cover"
+      loading="lazy"
+    />
+
+  /* 3️⃣ Icon fallback */
+  ) : (
+    <div
+      className={`h-[240px] flex items-center justify-center bg-gradient-to-br ${course.imageColor}`}
+    >
+      <span className="text-7xl">{course.icon}</span>
+    </div>
+  )}
+</div>
+
 
           {course.pricing && (
             <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-bold text-gray-900">

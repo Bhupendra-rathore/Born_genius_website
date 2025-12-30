@@ -9,6 +9,41 @@ import { fetchAllCourses } from '../services/coursesService';
 import { Course } from '../types';
 import { fetchRandomBlogs } from '../services/articlesService';
 
+// Course Card Component with image error handling
+const CourseCard: React.FC<{ course: Course; onClick: () => void }> = ({ course, onClick }) => {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-[200px] md:w-full"
+    >
+      <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+        {course.image_url && !imageError ? (
+          <img
+            src={course.image_url}
+            alt={course.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div
+            className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${course.imageColor}`}
+          >
+            <span className="text-6xl">{course.icon}</span>
+          </div>
+        )}
+      </div>
+
+      <h4 className="text-sm font-bold mt-2">{course.title}</h4>
+      <p className="text-xs text-gray-500">
+        Ages {course.ageRange}
+      </p>
+    </button>
+  );
+};
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
 
@@ -25,31 +60,30 @@ export const Home: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const coursesData = await fetchAllCourses();
-    const blogsData = await fetchRandomBlogs();
+      const coursesData = await fetchAllCourses();
+      const blogsData = await fetchRandomBlogs();
 
-    // Courses
-    if (Array.isArray(coursesData)) {
-      setCourses(coursesData.filter(c => !c.isLocked));
-    } else {
-      setCourses([]);
+      // Courses
+      if (Array.isArray(coursesData)) {
+        setCourses(coursesData.filter(c => !c.isLocked));
+      } else {
+        setCourses([]);
+      }
+
+      // Blogs (random 3)
+      setBlogs(Array.isArray(blogsData) ? blogsData : []);
+
+    } catch (err) {
+      console.error('Home loadData error:', err);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
     }
-
-    // Blogs (random 3)
-    setBlogs(Array.isArray(blogsData) ? blogsData : []);
-
-  } catch (err) {
-    console.error('Home loadData error:', err);
-    setError('Failed to load data');
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleRequestSuccess = () => {
     setShowToast(true);
@@ -115,21 +149,11 @@ export const Home: React.FC = () => {
                 {courses
                   .filter(course => course.tier === 'mini')
                   .map(course => (
-                    <button
+                    <CourseCard
                       key={course.id}
+                      course={course}
                       onClick={() => navigate(`/course/${course.id}`)}
-                      className="w-[200px] md:w-full"
-                    >
-                      <div
-                        className={`aspect-square rounded-2xl bg-gradient-to-br ${course.imageColor} flex items-center justify-center`}
-                      >
-                        <span className="text-6xl">{course.icon}</span>
-                      </div>
-                      <h4 className="text-sm font-bold mt-2">{course.title}</h4>
-                      <p className="text-xs text-gray-500">
-                        Ages {course.ageRange}
-                      </p>
-                    </button>
+                    />
                   ))}
 
                 <button onClick={() => setIsModalOpen(true)}>
@@ -153,21 +177,11 @@ export const Home: React.FC = () => {
                 {courses
                   .filter(course => course.tier === 'premium')
                   .map(course => (
-                    <button
+                    <CourseCard
                       key={course.id}
+                      course={course}
                       onClick={() => navigate(`/course/${course.id}`)}
-                      className="w-[200px] md:w-full"
-                    >
-                      <div
-                        className={`aspect-square rounded-2xl bg-gradient-to-br ${course.imageColor} flex items-center justify-center`}
-                      >
-                        <span className="text-6xl">{course.icon}</span>
-                      </div>
-                      <h4 className="text-sm font-bold mt-2">{course.title}</h4>
-                      <p className="text-xs text-gray-500">
-                        Ages {course.ageRange}
-                      </p>
-                    </button>
+                    />
                   ))}
               </div>
             </section>
@@ -189,31 +203,30 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-4 px-4 md:px-0">
-          {blogs.map((blog) => (
-  <button
-    key={blog.id}
-    onClick={() => navigate(`/updates/${blog.slug}`)}
-    className="bg-white rounded-xl p-4 text-left shadow-sm hover:shadow-md"
-  >
-    <span className="text-xs text-brand-blue font-semibold">
-      {blog.category}
-    </span>
+            {blogs.map((blog) => (
+              <button
+                key={blog.id}
+                onClick={() => navigate(`/updates/${blog.slug}`)}
+                className="bg-white rounded-xl p-4 text-left shadow-sm hover:shadow-md"
+              >
+                <span className="text-xs text-brand-blue font-semibold">
+                  {blog.category}
+                </span>
 
-    <h3 className="font-bold text-gray-900 mt-1 line-clamp-2">
-      {blog.title}
-    </h3>
+                <h3 className="font-bold text-gray-900 mt-1 line-clamp-2">
+                  {blog.title}
+                </h3>
 
-    <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-      {blog.excerpt}
-    </p>
+                <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+                  {blog.excerpt}
+                </p>
 
-    <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
-      <span>{blog.author_photo || '👨‍🏫'}</span>
-      <span>{blog.author}</span>
-    </div>
-  </button>
-))}
-
+                <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+                  <span>{blog.author_photo || '👨‍🏫'}</span>
+                  <span>{blog.author}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </section>
       </main>

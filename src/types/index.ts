@@ -91,6 +91,9 @@ export interface Course {
   faqs?: FAQ[];
   relatedCourses?: string[];
   prerequisites?: string[];
+  image_url?: string | null;
+  vimeo_video_url?: string | null;
+
 }
 
 export interface BlogPost {
