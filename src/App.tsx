@@ -11,8 +11,7 @@ import { ArticleDetail } from './pages/ArticleDetail';
 import { BottomNav } from './components/BottomNav';
 import { DesktopNav } from './components/DesktopNav';
 import { MobileHeader } from './components/MobileHeader';
-import { Admin } from './pages/admin/Admin';
-import { Dashboard } from './pages/admin/Dashboard';
+
 import { CourseList } from './pages/admin/CourseList';
 import { CourseEditor } from './pages/admin/CourseEditor';
 import { OrdersList } from './pages/admin/OrdersList';
@@ -24,8 +23,8 @@ function App() {
   return (
    
       <Routes>
-        <Route path="/admin" element={<Admin />}>
-          <Route index element={<Dashboard />} />
+        <Route path="/admin" element={<Checkout/>}>
+          <Route index element={<CourseDetail />} />
           <Route path="courses" element={<CourseList />} />
           <Route path="courses/new" element={<CourseEditor />} />
           <Route path="courses/:id/edit" element={<CourseEditor />} />

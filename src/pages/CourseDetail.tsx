@@ -4,6 +4,7 @@ import { ArrowLeft, Share2, Heart, Star, ChevronDown, ChevronUp, Check, X, Clock
 import { fetchCourseById } from '../services/coursesService';
 import { Course } from '../types';
 import { CourseEnquiryModal } from '../components/CourseEnquiryModal';
+import { addToFavorites, removeFromFavorites } from '../services/favoritesService';
 
 export const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,7 +108,18 @@ export const CourseDetail: React.FC = () => {
               <Share2 className="w-5 h-5 md:w-6 md:h-6 text-gray-900" />
             </button>
             <button
-              onClick={() => setIsFavorited(!isFavorited)}
+              onClick={async () => {
+  if (!course) return;
+
+  if (isFavorited) {
+    await removeFromFavorites(course.id);
+    setIsFavorited(false);
+  } else {
+    await addToFavorites(course.id);
+    setIsFavorited(true);
+  }
+}}
+
               className="w-10 h-10 md:w-12 md:h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
             >
               <Heart className={`w-5 h-5 md:w-6 md:h-6 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-900'}`} />

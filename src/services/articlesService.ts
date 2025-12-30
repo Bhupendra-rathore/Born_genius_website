@@ -4,77 +4,118 @@ export interface Article {
   id: string;
   title: string;
   slug: string;
-  content: string;
   excerpt: string;
+  content: string;
   category: string;
   author: string;
   author_photo?: string;
-  image_url?: string;
-  published_date: string;
-  status: string;
-  views_count?: number;
-  upvotes_count?: number;
   reading_time_minutes?: number;
-  created_at: string;
-  updated_at: string;
+  views_count?: number;
+  published_date: string;
 }
 
-export async function fetchPublishedArticles(): Promise<Article[]> {
+/* =========================
+   FETCH ALL PUBLISHED BLOGS
+========================= */
+export const fetchPublishedArticles = async (): Promise<Article[]> => {
   const { data, error } = await supabase
-    .from('articles')
-    .select('*')
+    .from('blogs')
+    .select(`
+      id,
+      title,
+      slug,
+      excerpt,
+      content,
+      category,
+      author,
+      author_photo,
+      reading_time_minutes,
+      views_count,
+      published_date
+    `)
     .eq('status', 'published')
     .order('published_date', { ascending: false });
 
   if (error) {
-    console.error('Error fetching articles:', error);
+    console.error('Blog fetch error:', error);
     throw error;
   }
 
   return data || [];
-}
+};
 
-export async function fetchArticleBySlug(slug: string): Promise<Article | null> {
+/* =========================
+   FETCH RANDOM 3 BLOGS (HOME)
+========================= */
+/* =========================
+   FETCH RANDOM 3 BLOGS (HOME)
+========================= */
+export const fetchRandomBlogs = async (): Promise<Article[]> => {
   const { data, error } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('slug', slug)
+    .from('blogs')
+    .select(`
+      id,
+      title,
+      slug,
+      excerpt,
+      category,
+      author,
+      author_photo,
+      published_date
+    `)
     .eq('status', 'published')
-    .maybeSingle();
+    .limit(12); // 👈 fetch more
 
   if (error) {
-    console.error('Error fetching article:', error);
+    console.error('Random blog fetch error:', error);
+    throw error;
+  }
+
+  if (!data) return [];
+
+  // ✅ Proper randomization
+  return data.sort(() => 0.5 - Math.random()).slice(0, 3);
+};
+
+/* =========================
+   FETCH BLOG BY SLUG
+========================= */
+export const fetchArticleBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('blogs')
+    .select(`
+      id,
+      title,
+      slug,
+      excerpt,
+      content,
+      category,
+      author,
+      author_photo,
+      reading_time_minutes,
+      views_count,
+      published_date
+    `)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .single();
+
+  if (error) {
+    console.error('Fetch article by slug error:', error);
     throw error;
   }
 
   return data;
-}
-
-export async function fetchArticlesByCategory(category: string): Promise<Article[]> {
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('status', 'published')
-    .eq('category', category)
-    .order('published_date', { ascending: false });
+};
+/* =========================
+   INCREMENT BLOG VIEW COUNT
+========================= */
+export const incrementArticleViews = async (articleId: string): Promise<void> => {
+  const { error } = await supabase.rpc('increment_blog_views', {
+    blog_id: articleId,
+  });
 
   if (error) {
-    console.error('Error fetching articles by category:', error);
-    throw error;
+    console.error('Increment views error:', error);
   }
-
-  return data || [];
-}
-
-export async function incrementArticleViews(articleId: string, sessionId: string): Promise<void> {
-  try {
-    await supabase.from('article_views').insert({
-      article_id: articleId,
-      session_id: sessionId,
-    });
-
-    await supabase.rpc('increment_article_views', { article_id: articleId });
-  } catch (error) {
-    console.error('Error incrementing article views:', error);
-  }
-}
+};

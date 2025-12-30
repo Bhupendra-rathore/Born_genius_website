@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+
+
 /* ================= TYPES ================= */
 type ViewType =
   | 'main'
@@ -42,6 +44,11 @@ export const Account: React.FC = () => {
   const [childName, setChildName] = useState('');
   const [childAge, setChildAge] = useState('');
   const [phone, setPhone] = useState('');
+  const [profileSaved, setProfileSaved] = useState(false);
+
+
+  /* FAVORITES */
+  const [favorites, setFavorites] = useState<any[]>([]);
 
   /* ================= AUTH LISTENER ================= */
   useEffect(() => {
@@ -50,6 +57,7 @@ export const Account: React.FC = () => {
         setUser(data.user);
         setIsAuthenticated(true);
         checkProfile(data.user.id);
+        loadFavorites(data.user.id);
       }
     });
 
@@ -59,6 +67,7 @@ export const Account: React.FC = () => {
           setUser(session.user);
           setIsAuthenticated(true);
           checkProfile(session.user.id);
+          loadFavorites(session.user.id);
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -71,16 +80,57 @@ export const Account: React.FC = () => {
     };
   }, []);
 
-  /* ================= CHECK PROFILE ================= */
+  /* ================= LOAD PROFILE ================= */
   const checkProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id, parent_name, child_name, child_age, phone')
+    .eq('id', userId)
+    .maybeSingle();
 
-    if (!data) setShowOnboarding(true);
-  };
+  if (error) {
+    console.error('Profile fetch error:', error);
+    return;
+  }
+
+  if (!data) {
+    setShowOnboarding(true);
+    return;
+  }
+
+  // ✅ Profile exists
+  setShowOnboarding(false);
+  setParentName(data.parent_name || '');
+  setChildName(data.child_name || '');
+  setChildAge(data.child_age?.toString() || '');
+  setPhone(data.phone || '');
+};
+
+
+  /* ================= LOAD FAVORITES ================= */
+ const loadFavorites = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('course_favorites')
+    .select(`
+      course_id,
+      courses (
+        id,
+        title,
+        age_range,
+        duration,
+        image_color,
+        icon
+      )
+    `)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Favorites load error:', error);
+    return;
+  }
+
+  setFavorites(data || []);
+};
 
   /* ================= AUTH ACTIONS ================= */
   const loginWithGoogle = async () => {
@@ -110,26 +160,152 @@ export const Account: React.FC = () => {
 
   /* ================= SAVE ONBOARDING ================= */
   const submitOnboarding = async () => {
-    if (!parentName || !childName || !childAge) return;
+  if (!parentName || !childName || !childAge) return;
 
-    await supabase.from('profiles').insert({
-      id: user.id,
-      parent_name: parentName,
-      child_name: childName,
-      child_age: Number(childAge),
-      phone,
-      email: user.email,
-    });
+  const { error } = await supabase.from('user_profiles').upsert({
+    id: user.id,
+    parent_name: parentName,
+    child_name: childName,
+    child_age: Number(childAge),
+    phone,
+    email: user.email,
+  });
 
+  if (!error) {
     setShowOnboarding(false);
-  };
+    setProfileSaved(true);
 
-  /* ================= SUB PAGES ================= */
+    // auto-hide popup after 2s
+    setTimeout(() => setProfileSaved(false), 2000);
+  }
+};
+
+
+
+  /* ================= WISHLIST PAGE ================= */
+  if (currentView === 'wishlist' && isAuthenticated) {
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-xl font-bold mb-4">Wishlist</h1>
+
+      {favorites.length === 0 ? (
+        <p className="text-gray-500">No favorite courses yet</p>
+      ) : (
+        <div className="space-y-4">
+          {favorites.map((item) => {
+            const course = item.courses;
+            if (!course) return null;
+
+            return (
+              <button
+  key={course.id}
+  onClick={() => window.location.href = `/course/${course.id}`}
+  className="w-full bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm text-left active:scale-95 transition"
+>
+
+                <div
+                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${course.image_color} flex items-center justify-center text-2xl`}
+                >
+                  {course.icon}
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900">
+                    {course.title}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Ages {course.age_range} • {course.duration}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        onClick={() => setCurrentView('main')}
+        className="mt-6 text-brand-orange font-semibold"
+      >
+        ← Back
+      </button>
+    </div>
+  );
+}
+if (currentView === 'profile' && isAuthenticated) {
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-xl font-bold mb-4">Profile & Family</h1>
+
+      <div className="bg-white rounded-2xl p-5 space-y-4">
+        <input
+          className="w-full border rounded-xl px-4 py-3"
+          placeholder="Parent Name"
+          value={parentName}
+          onChange={(e) => setParentName(e.target.value)}
+        />
+
+        <input
+          className="w-full border rounded-xl px-4 py-3"
+          placeholder="Child Name"
+          value={childName}
+          onChange={(e) => setChildName(e.target.value)}
+        />
+
+        <input
+          type="number"
+          className="w-full border rounded-xl px-4 py-3"
+          placeholder="Child Age"
+          value={childAge}
+          onChange={(e) => setChildAge(e.target.value)}
+        />
+
+        <input
+          className="w-full border rounded-xl px-4 py-3"
+          placeholder="Phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+
+        {/* Email (read only) */}
+        <input
+          disabled
+          className="w-full border rounded-xl px-4 py-3 bg-gray-100 text-gray-500"
+          value={user.email}
+        />
+
+        <button
+          onClick={submitOnboarding}
+          className="w-full bg-gradient-to-r from-brand-orange to-brand-coral text-white rounded-xl py-3 font-semibold"
+        >
+          Save Changes
+        </button>
+      </div>
+
+      <button
+        onClick={() => setCurrentView('main')}
+        className="mt-6 text-brand-orange font-semibold"
+      >
+        ← Back
+      </button>
+    </div>
+  );
+}
+
+
+
+  /* ================= SUB PAGES PLACEHOLDER ================= */
   if (currentView !== 'main' && isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 p-6 text-center">
         <h1 className="text-xl font-bold capitalize">{currentView}</h1>
         <p className="text-gray-500 mt-6">Coming soon…</p>
+        <button
+          onClick={() => setCurrentView('main')}
+          className="mt-6 text-brand-orange font-semibold"
+        >
+          ← Back
+        </button>
       </div>
     );
   }
@@ -208,9 +384,6 @@ export const Account: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
             <h2 className="text-xl font-bold mb-2">Continue with Email</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              We’ll send a confirmation link
-            </p>
 
             {!emailSent ? (
               <>
@@ -235,13 +408,6 @@ export const Account: React.FC = () => {
                 ✅ Check your email and click the link
               </p>
             )}
-
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="w-full mt-4 text-gray-500"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
@@ -255,22 +421,26 @@ export const Account: React.FC = () => {
             <input
               className="w-full border rounded-xl px-4 py-3 mb-3"
               placeholder="Parent Name"
+              value={parentName}
               onChange={(e) => setParentName(e.target.value)}
             />
             <input
               className="w-full border rounded-xl px-4 py-3 mb-3"
               placeholder="Child Name"
+              value={childName}
               onChange={(e) => setChildName(e.target.value)}
             />
             <input
               type="number"
               className="w-full border rounded-xl px-4 py-3 mb-3"
               placeholder="Child Age"
+              value={childAge}
               onChange={(e) => setChildAge(e.target.value)}
             />
             <input
               className="w-full border rounded-xl px-4 py-3 mb-4"
               placeholder="Phone (optional)"
+              value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
 
@@ -283,6 +453,7 @@ export const Account: React.FC = () => {
           </div>
         </div>
       )}
+      
     </div>
   );
 };

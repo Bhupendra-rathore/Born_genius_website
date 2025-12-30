@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Calendar, ChevronRight } from 'lucide-react';
-import { categories, blogPosts } from '../data/mockData'; // blog still mock (we’ll make it supabase next)
+import { categories } from '../data/mockData';
+
 import { RequestCourseModal } from '../components/RequestCourseModal';
 import { Toast } from '../components/Toast';
 import { fetchAllCourses } from '../services/coursesService';
 import { Course } from '../types';
+import { fetchRandomBlogs } from '../services/articlesService';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -13,6 +15,8 @@ export const Home: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [blogs, setBlogs] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,25 +25,31 @@ export const Home: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const coursesData = await fetchAllCourses();
+    const coursesData = await fetchAllCourses();
+    const blogsData = await fetchRandomBlogs();
 
-      // Safety: ensure array
-      if (Array.isArray(coursesData)) {
-        setCourses(coursesData.filter(c => !c.isLocked));
-      } else {
-        setCourses([]);
-      }
-    } catch (err) {
-      console.error('Home loadData error:', err);
-      setError('Failed to load courses');
-    } finally {
-      setLoading(false);
+    // Courses
+    if (Array.isArray(coursesData)) {
+      setCourses(coursesData.filter(c => !c.isLocked));
+    } else {
+      setCourses([]);
     }
-  };
+
+    // Blogs (random 3)
+    setBlogs(Array.isArray(blogsData) ? blogsData : []);
+
+  } catch (err) {
+    console.error('Home loadData error:', err);
+    setError('Failed to load data');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleRequestSuccess = () => {
     setShowToast(true);
@@ -179,18 +189,31 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-4 px-4 md:px-0">
-            {blogPosts.slice(0, 3).map(post => (
-              <button
-                key={post.id}
-                onClick={() => navigate(`/updates/${post.id}`)}
-                className="bg-white rounded-2xl border p-4 text-left"
-              >
-                <h4 className="font-bold text-sm">{post.title}</h4>
-                <p className="text-xs text-gray-500 mt-1">
-                  {post.excerpt}
-                </p>
-              </button>
-            ))}
+          {blogs.map((blog) => (
+  <button
+    key={blog.id}
+    onClick={() => navigate(`/updates/${blog.slug}`)}
+    className="bg-white rounded-xl p-4 text-left shadow-sm hover:shadow-md"
+  >
+    <span className="text-xs text-brand-blue font-semibold">
+      {blog.category}
+    </span>
+
+    <h3 className="font-bold text-gray-900 mt-1 line-clamp-2">
+      {blog.title}
+    </h3>
+
+    <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+      {blog.excerpt}
+    </p>
+
+    <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+      <span>{blog.author_photo || '👨‍🏫'}</span>
+      <span>{blog.author}</span>
+    </div>
+  </button>
+))}
+
           </div>
         </section>
       </main>
