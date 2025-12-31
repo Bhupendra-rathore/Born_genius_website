@@ -19,9 +19,12 @@ import { UsersList } from './pages/admin/UsersList';
 import { EnquiriesList } from './pages/admin/EnquiriesList';
 import { CourseRequestsList } from './pages/admin/CourseRequestsList';
 
+// ✅ ADD: Import InstallButton
+import { InstallButton } from './components/InstallButton';
+
 function App() {
   return (
-   
+    <>
       <Routes>
         <Route path="/admin" element={<Checkout/>}>
           <Route index element={<CourseDetail />} />
@@ -54,7 +57,10 @@ function App() {
           </div>
         } />
       </Routes>
-   
+      
+      {/* ✅ ADD: Install Button (shows on all pages except admin) */}
+      <InstallButton />
+    </>
   );
 }
 

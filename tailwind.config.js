@@ -13,6 +13,17 @@ export default {
           coral: '#FF6B6B',
         },
       },
+      // ✅ ADD: Animations for install banner
+      animation: {
+        'slide-up': 'slideUp 0.3s ease-out',
+        'bounce': 'bounce 1s infinite',
+      },
+      keyframes: {
+        slideUp: {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
     },
   },
   plugins: [],
